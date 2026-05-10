@@ -25,27 +25,40 @@ docs/     # 仕様・開発ルール
 ## 3. 実行コマンド
 
 ```bash
-uv sync                              # 依存導入
-uv run python src/<script>.py        # 各ステップを単体実行
-uv run ruff check .                  # lint
-uv run ruff format .                 # format
-uv run ruff format --check .         # format チェック (CI と同じ)
+uv sync                                        # 依存導入
+uv run python src/<script>.py                  # 各ステップを単体実行
+uv run ruff check .                            # lint
+uv run ruff format .                           # format
+uv run ruff format --check .                   # format チェック (CI と同じ)
+uv run pytest tests/unit tests/integration     # 高速テスト
+uv run playwright install --with-deps chromium # 初回のみ
+uv run pytest tests/e2e                        # E2E
 ```
 
-## 4. 守ってほしいこと
+## 4. 開発スタイル: TDD
+
+**Red → Green → Refactor** を原則とする。詳細は `docs/development.md` 第7節。
+
+- 計算ロジックや純粋関数は **必ず unit test を伴う**
+- 仕様変更が起点の場合、まず失敗するテストを書いてから実装する
+- 外部依存（yfinance / HTTP / ファイル）はテストではモック / フィクスチャを使う
+- E2E では `data-testid` 属性で要素を特定する。実装時に属性を残す
+- `develop` マージで Pages の `/develop/` に反映される。サイトで気になる挙動を見つけたら、まずその挙動を再現するテストを書く
+
+## 5. 守ってほしいこと
 
 - `data/` と `public/` は GitHub Actions が更新する。コードからの書き換えロジックは `src/` 配下に置き、生成物自体を手で編集しない
 - `config/*.yaml` のスキーマ変更は `docs/spec.md` を同じ PR で更新する
 - 価格取得は失敗してもジョブ全体が落ちないように、`src/fetch_prices.py` のレベルでフォールバック（前回値利用など）を入れる
 - 為替・基準価額・株価の取得元は明示する（CSV の `source` 列、または取得ログ）
 
-## 5. 何を書かないか
+## 6. 何を書かないか
 
 - 売却・税金・配当再投資の厳密な処理は対象外（`docs/spec.md` 第2節）
 - 証券口座連携や認証情報を扱うコードを追加しない
 - ハードコードした個人情報・口座番号を含めない
 
-## 6. Claude Code 用のスキル
+## 7. Claude Code 用のスキル
 
 `.claude/skills/` 配下にプロジェクト固有のスキルがある。該当する作業時には自動的に参照される想定。
 

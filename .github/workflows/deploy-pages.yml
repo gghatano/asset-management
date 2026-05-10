@@ -1,0 +1,55 @@
+name: deploy-pages
+
+on:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# main / develop の同時デプロイで gh-pages が衝突しないよう直列化
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Build dashboard
+        run: uv run python -m src.build_dashboard --output public/index.html
+
+      # main: gh-pages のルートへ。/develop/ 配下は keep_files で保持
+      - name: Deploy main to /
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          keep_files: true
+          commit_message: "deploy(main): ${{ github.sha }}"
+
+      # develop: gh-pages の /develop/ 配下へ。ルートは keep_files で保持
+      - name: Deploy develop to /develop/
+        if: github.ref == 'refs/heads/develop'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          destination_dir: develop
+          keep_files: true
+          commit_message: "deploy(develop): ${{ github.sha }}"

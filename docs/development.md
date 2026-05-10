@@ -134,18 +134,60 @@ PR テンプレートは `.github/PULL_REQUEST_TEMPLATE.md` を参照。
 - [uv](https://docs.astral.sh/uv/)
 
 ```bash
-uv sync                       # 依存導入
-uv run python src/<script>.py # 実行
-uv run pytest                 # テスト（追加した場合）
+uv sync                                        # 依存導入
+uv run python src/<script>.py                  # 実行
+uv run pytest tests/unit tests/integration     # 高速テスト
+uv run playwright install --with-deps chromium # 初回のみ
+uv run pytest tests/e2e                        # E2E テスト
 ```
 
-## 7. CI / 自動化
+## 7. テスト方針 (TDD)
 
-- PR では lint / test を実行（追加していくたびに `.github/workflows/` を拡張）
-- `main` へのマージで GitHub Pages を更新（詳細は `docs/spec.md` の「10. バッチ処理」）
-- 日次バッチ（価格更新）は `main` 上の Actions が走る
+原則 **Red → Green → Refactor** で進める。
 
-## 8. ファイル運用
+### サイクル
+
+1. **Red**: 期待する振る舞いをテストとして書く。落ちることを確認する
+2. **Green**: テストを通す最小限の実装をする
+3. **Refactor**: 重複や読みづらさを除く。テストは通り続けることを確認
+
+### テストの分類
+
+| 分類 | 配置 | 目的 |
+| --- | --- | --- |
+| unit | `tests/unit/` | 純粋関数（計算・整形・パース）の境界条件まで含めた検証 |
+| integration | `tests/integration/` | ファイル I/O やパイプライン結合（ネットワーク無し） |
+| e2e | `tests/e2e/` | 生成 HTML を Playwright で開き、KPI / グラフが描画されているか確認 |
+
+### 守ってほしいこと
+
+- 計算ロジック（`src/calculate.py` 等）は **必ず unit test を伴う**
+- 新規エンドポイント・スクリプトを追加するときは「動かして確認する前に」入出力のテストを書く
+- 外部依存（yfinance, HTTP, ファイルシステム）はテストではモック / フィクスチャを使う
+- 仕様変更（spec.md）が起点の場合、テストを先に直してから実装を直す
+- E2E は HTML の `data-testid` 属性を頼りに書く。テスト容易性のために属性を残す
+
+### サイトでの確認 → テスト追加
+
+`develop` にマージすると Pages の `/develop/` に反映される。
+ブラウザで挙動を見て気になった点があれば、まずその挙動を **失敗するテストとして書く** ところから始める。
+
+```text
+1. /develop/ で異常を発見
+2. それを再現する E2E or unit test を書く（Red）
+3. 修正実装（Green）
+4. PR を develop にマージ → /develop/ で再確認
+```
+
+## 8. CI / 自動化
+
+- PR では lint / unit + integration / e2e の 3 ジョブが走る
+- `main` または `develop` へのマージで Pages を更新
+  - `main` → ルート（本番）
+  - `develop` → `/develop/` （ステージング）
+- 日次バッチ（価格更新）は `main` 上の Actions が走る（`docs/spec.md` 「10. バッチ処理」）
+
+## 9. ファイル運用
 
 | パス | 編集主体 | 備考 |
 | --- | --- | --- |
@@ -153,11 +195,12 @@ uv run pytest                 # テスト（追加した場合）
 | `data/` | Actions が自動更新 | 手動編集禁止 |
 | `public/` | Actions が自動生成 | 手動編集禁止 |
 | `src/` | 人手 | 機能追加時は `feature/*` で |
+| `tests/` | 人手 | 実装と同じ PR でテストを追加 |
 | `docs/` | 人手 | 仕様変更は同じ PR で更新 |
 
-## 9. やらないこと（個人開発の割り切り）
+## 10. やらないこと（個人開発の割り切り）
 
 - 厳密なコードオーナー / レビュアー必須化
 - 厳密なブランチ保護ルール（必要になったら追加）
 - セマンティックリリース自動化（必要になったら）
-- 過度なテスト網羅（致命的な計算ロジックのみ重点的にカバー）
+- 100% カバレッジ（致命的な計算ロジックを優先的にカバー）
