@@ -1,0 +1,21 @@
+monthly_purchases:
+  - asset_id: emaxis_slim_sp500
+    amount_jpy: 50000
+    purchase_day: 5
+    start_month: "2026-05"
+    end_month: null
+    account_type: "NISA"
+
+  - asset_id: vt
+    amount_jpy: 20000
+    purchase_day: 10
+    start_month: "2026-05"
+    end_month: null
+    account_type: "特定"
+
+  - asset_id: cash_jpy
+    amount_jpy: 30000
+    purchase_day: 25
+    start_month: "2026-05"
+    end_month: null
+    account_type: "現金"

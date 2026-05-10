@@ -1,0 +1,17 @@
+as_of: "2026-05-01"
+
+positions:
+  - asset_id: emaxis_slim_sp500
+    quantity: 1200000
+    quantity_unit: "口"
+    book_value_jpy: 4500000
+
+  - asset_id: vt
+    quantity: 20
+    quantity_unit: "株"
+    book_value_jpy: 360000
+
+  - asset_id: cash_jpy
+    quantity: 1000000
+    quantity_unit: "円"
+    book_value_jpy: 1000000
