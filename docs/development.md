@@ -169,22 +169,31 @@ uv run pytest tests/e2e                        # E2E テスト
 
 ### サイトでの確認 → テスト追加
 
-`develop` にマージすると Pages の `/develop/` に反映される。
-ブラウザで挙動を見て気になった点があれば、まずその挙動を **失敗するテストとして書く** ところから始める。
+GitHub Pages は **`main` のみ自動デプロイ** する。`develop` での確認はローカルで行う。
+
+```bash
+# develop ブランチで dashboard を生成
+uv run python -m src.build_dashboard --output public/index.html
+
+# ローカル静的サーバで開く
+python -m http.server -d public 8000
+# → http://localhost:8000
+```
+
+挙動が気になったら **失敗するテストを先に書く** こと。
 
 ```text
-1. /develop/ で異常を発見
+1. ローカル (or main 公開後の Pages) で異常を発見
 2. それを再現する E2E or unit test を書く（Red）
 3. 修正実装（Green）
-4. PR を develop にマージ → /develop/ で再確認
+4. PR を develop にマージ → ローカルで再確認 → release で main へ
 ```
 
 ## 8. CI / 自動化
 
 - PR では lint / unit + integration / e2e の 3 ジョブが走る
-- `main` または `develop` へのマージで Pages を更新
-  - `main` → ルート（本番）
-  - `develop` → `/develop/` （ステージング）
+- `main` push で Pages を更新（`actions/deploy-pages`、ルート 1 つ）
+- `develop` には Pages デプロイは紐づかない（ローカル確認 + リリース時に main へ反映）
 - 日次バッチ（価格更新）は `main` 上の Actions が走る（`docs/spec.md` 「10. バッチ処理」）
 
 ## 9. ファイル運用
