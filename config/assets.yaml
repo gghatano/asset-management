@@ -1,0 +1,27 @@
+assets:
+  - asset_id: emaxis_slim_sp500
+    name: "eMAXIS Slim 米国株式（S&P500）"
+    asset_type: "mutual_fund"
+    currency: "JPY"
+    price_source: "yahoo_finance_jp"
+    source_code: "03311187"
+    unit_price_base: 10000
+    enabled: true
+
+  - asset_id: vt
+    name: "Vanguard Total World Stock ETF"
+    asset_type: "etf"
+    currency: "USD"
+    price_source: "yfinance"
+    source_code: "VT"
+    unit_price_base: 1
+    enabled: true
+
+  - asset_id: cash_jpy
+    name: "日本円現金"
+    asset_type: "cash"
+    currency: "JPY"
+    price_source: "fixed"
+    source_code: "JPY"
+    unit_price_base: 1
+    enabled: true
