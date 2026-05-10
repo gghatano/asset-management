@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>積立投資 評価額トラッカー</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; }
+    .kpi {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    .kpi-card { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; }
+    .kpi-label { color: #666; font-size: 0.85rem; }
+    .kpi-value { font-size: 1.5rem; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>積立投資 評価額トラッカー</h1>
+  <section class="kpi" data-testid="kpi">
+    <div class="kpi-card">
+      <div class="kpi-label">現在評価額</div>
+      <div class="kpi-value" data-testid="kpi-current-value">0 円</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">累計投資額</div>
+      <div class="kpi-value" data-testid="kpi-total-invested">0 円</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">評価損益</div>
+      <div class="kpi-value" data-testid="kpi-profit-loss">0 円</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">評価損益率</div>
+      <div class="kpi-value" data-testid="kpi-profit-loss-rate">0.00%</div>
+    </div>
+  </section>
+  <p data-testid="status">スケルトン版です。実データ反映は後続の Issue で対応します。</p>
+</body>
+</html>
