@@ -2,7 +2,7 @@ name: deploy-pages
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -10,7 +10,6 @@ permissions:
   pages: write
   id-token: write
 
-# main と develop が同時にデプロイしないよう直列化（後勝ちで上書き）
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -19,6 +18,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
@@ -27,50 +28,11 @@ jobs:
       - name: Set up Python
         run: uv python install 3.12
 
-      # main を build → site/index.html
-      - name: Checkout main
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          path: main-src
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
 
-      - name: Build main dashboard
-        working-directory: main-src
-        run: |
-          if [ -f src/build_dashboard.py ]; then
-            uv sync --all-extras --dev
-            mkdir -p ../site
-            uv run python -m src.build_dashboard --output ../site/index.html
-          else
-            mkdir -p ../site
-            cat > ../site/index.html <<'EOF'
-          <!DOCTYPE html>
-          <html lang="ja"><head><meta charset="utf-8">
-          <title>積立投資 評価額トラッカー</title></head>
-          <body><h1>積立投資 評価額トラッカー</h1>
-          <p>main 未リリース。<a href="develop/">/develop/</a> をご覧ください。</p>
-          </body></html>
-          EOF
-          fi
-
-      # develop を build → site/develop/index.html
-      - name: Checkout develop
-        uses: actions/checkout@v4
-        with:
-          ref: develop
-          path: develop-src
-
-      - name: Build develop dashboard
-        working-directory: develop-src
-        run: |
-          if [ -f src/build_dashboard.py ]; then
-            uv sync --all-extras --dev
-            mkdir -p ../site/develop
-            uv run python -m src.build_dashboard --output ../site/develop/index.html
-          else
-            mkdir -p ../site/develop
-            echo "<h1>develop に build_dashboard がまだありません</h1>" > ../site/develop/index.html
-          fi
+      - name: Build dashboard
+        run: uv run python -m src.build_dashboard --output site/index.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

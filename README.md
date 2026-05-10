@@ -17,6 +17,17 @@ uv sync
 ```bash
 uv run ruff check .
 uv run ruff format --check .
+uv run pytest tests/unit tests/integration
+```
+
+## ローカルで dashboard を確認
+
+`develop` の途中状態を確認するときはローカルで開く（Pages デプロイは `main` のみ）。
+
+```bash
+uv run python -m src.build_dashboard --output public/index.html
+python -m http.server -d public 8000
+# → http://localhost:8000
 ```
 
 機能追加は `develop` から `feature/*` を切る。詳細は `docs/development.md`。
