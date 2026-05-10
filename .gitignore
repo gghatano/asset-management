@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+build/
+dist/
+
+# venv / uv
+.venv/
+venv/
+.python-version
+
+# テスト / 型 / lint キャッシュ
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# エディタ / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 環境変数
+.env
+.env.local
+
+# ログ・一時ファイル
+*.log
+tmp/
+.tmp/
