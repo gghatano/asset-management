@@ -43,7 +43,7 @@ uv run pytest tests/e2e                        # E2E
 - 仕様変更が起点の場合、まず失敗するテストを書いてから実装する
 - 外部依存（yfinance / HTTP / ファイル）はテストではモック / フィクスチャを使う
 - E2E では `data-testid` 属性で要素を特定する。実装時に属性を残す
-- `develop` マージで Pages の `/develop/` に反映される。サイトで気になる挙動を見つけたら、まずその挙動を再現するテストを書く
+- `develop` でローカル確認（`uv run python -m src.build_dashboard && python -m http.server -d public 8000`）し、サイトで気になる挙動を見つけたら、まずその挙動を再現するテストを書く。`main` マージで本番 Pages に反映される
 
 ## 5. 守ってほしいこと
 
