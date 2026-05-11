@@ -189,6 +189,27 @@ source_code: 1655.T
 外貨建て資産は、USD価格 × USD/JPYで円換算する。
 初期実装では JPY 資産を中心にし、外貨建てETFは追加実装扱いでもよい。
 
+#### 運用上の取り扱い（Phase 1 実装で確定）
+
+円換算用の為替は、価格 CSV (`data/prices/prices.csv`) に通常の asset と同じ形式で記録する。
+asset_id は `<currency_lower>_jpy` 形式（例: `usd_jpy`）。
+`generate_transactions` / `calculate_portfolio` は購入・評価時にこの asset_id を引いて掛け合わせる。
+
+実価格取得を有効にする場合は `config/assets.yaml` に以下のような entry を追加する。
+
+```yaml
+- asset_id: usd_jpy
+  name: "USD/JPY"
+  asset_type: "fx"          # 任意。fetch_prices からは price_source のみ参照
+  currency: "JPY"
+  price_source: "yfinance"
+  source_code: "USDJPY=X"
+  unit_price_base: 1
+  enabled: true
+```
+
+`usd_jpy` の価格が無い日は、外貨建て購入はその日 skip され warn ログを残す（ジョブは継続）。
+
 ## 7. 計算ロジック
 
 ### 7.1 投資信託の購入口数
@@ -247,7 +268,7 @@ date,asset_id,price,currency,source
 
 ```text
 date,asset_id,amount_jpy,price,quantity,account_type
-2026-05-05,emaxis_slim_sp500,50000,42272,11828.38,NISA
+2026-05-05,emaxis_slim_sp500,50000,42272,11828.16,NISA
 2026-05-10,vt,20000,128.5,0.99,特定
 ```
 
