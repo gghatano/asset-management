@@ -69,3 +69,12 @@ git push origin vX.Y.Z
 ## 7. ロールバック
 
 問題が発生した場合は revert PR を `main` で作成する。直接 force push はしない。
+
+## 8. Pages デプロイの落とし穴
+
+過去にハマった点をメモ:
+
+- **`github-pages` environment は default branch (`main`) からしかデプロイ不可**。`develop` などからの deploy ジョブは "rejected by environment protection rules" で弾かれる。develop 用の staging を再導入したい場合は Settings > Environments > github-pages の Deployment branches に追加する
+- **Public / Private 切替後に旧 protection rule が残骸として残る** ことがある。Settings > Environments で `github-pages` を一度削除して再生成すると default に戻る
+- **Pages の Source は "GitHub Actions"** にする。"Deploy from a branch" だと `actions/deploy-pages` が使えない
+- リリース PR をマージしてから Pages 反映まで通常 1〜2 分。`https://gghatano.github.io/asset-management/` が 403 / 404 のときは workflow の deploy ジョブのログを確認
