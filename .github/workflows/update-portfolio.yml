@@ -1,0 +1,60 @@
+name: update-portfolio
+
+on:
+  schedule:
+    - cron: "0 22 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-portfolio
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # データを commit するため、main にチェックアウトする
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      # 価格取得が失敗してもジョブを落とさない（fetch_prices.py 内で
+      # 前回値フォールバック済み）
+      - name: Fetch prices
+        run: uv run python -m src.fetch_prices
+
+      - name: Generate transactions
+        run: uv run python -m src.generate_transactions
+
+      - name: Calculate portfolio
+        run: uv run python -m src.calculate_portfolio
+
+      - name: Build dashboard
+        run: uv run python -m src.build_dashboard
+
+      - name: Commit and push data + public
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data public
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "chore(data): update portfolio data ($(date -u +%Y-%m-%d))"
+          git push origin main
