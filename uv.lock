@@ -18,6 +18,7 @@ dependencies = [
     { name = "pandas" },
     { name = "plotly" },
     { name = "pyyaml" },
+    { name = "requests" },
     { name = "yfinance" },
 ]
 
@@ -33,6 +34,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.2" },
     { name = "plotly", specifier = ">=5.22" },
     { name = "pyyaml", specifier = ">=6.0" },
+    { name = "requests", specifier = ">=2.32" },
     { name = "yfinance", specifier = ">=0.2.40" },
 ]
 
