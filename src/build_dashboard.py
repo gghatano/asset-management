@@ -33,6 +33,18 @@ DEFAULT_KPI: dict[str, Any] = {
 
 PLOTLY_CDN = "https://cdn.plot.ly/plotly-2.35.2.min.js"
 
+# Finance/fintech 系の落ち着いた配色
+COLOR_BG = "#f6f8fb"
+COLOR_SURFACE = "#ffffff"
+COLOR_BORDER = "#e2e8f0"
+COLOR_TEXT = "#0f172a"
+COLOR_MUTED = "#64748b"
+COLOR_ACCENT = "#1d4ed8"
+COLOR_SUCCESS = "#059669"
+COLOR_DANGER = "#dc2626"
+COLOR_GRID = "#eef2f7"
+CHART_PALETTE = ["#1d4ed8", "#059669", "#d97706", "#7c3aed", "#0891b2", "#db2777"]
+
 
 # -------------------- KPI --------------------
 
@@ -54,12 +66,64 @@ def derive_kpi(
     return kpi
 
 
+def latest_date(*dfs: pd.DataFrame | None) -> str | None:
+    """与えられた DataFrame 群から date 列の最大値を ISO 文字列で返す。"""
+    candidates: list[Any] = []
+    for df in dfs:
+        if df is None or df.empty or "date" not in df.columns:
+            continue
+        candidates.append(df["date"].max())
+    if not candidates:
+        return None
+    return _format_date(max(candidates))
+
+
 # -------------------- グラフ --------------------
+
+
+def _apply_chart_layout(fig: go.Figure, height: int = 300) -> None:
+    fig.update_layout(
+        template="plotly_white",
+        colorway=CHART_PALETTE,
+        font={
+            "family": "system-ui, -apple-system, sans-serif",
+            "color": COLOR_TEXT,
+            "size": 12,
+        },
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        margin={"l": 50, "r": 20, "t": 10, "b": 40},
+        height=height,
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": -0.3,
+            "xanchor": "left",
+            "x": 0,
+        },
+        xaxis={
+            "showgrid": False,
+            "linecolor": COLOR_BORDER,
+            "tickcolor": COLOR_BORDER,
+            "tickfont": {"color": COLOR_MUTED},
+        },
+        yaxis={
+            "gridcolor": COLOR_GRID,
+            "linecolor": COLOR_BORDER,
+            "tickcolor": COLOR_BORDER,
+            "tickfont": {"color": COLOR_MUTED},
+        },
+    )
 
 
 def _chart_div(fig: go.Figure, testid: str, title: str, div_id: str) -> str:
     body = fig.to_html(include_plotlyjs=False, full_html=False, div_id=div_id)
-    return f'<section class="chart" data-testid="{testid}"><h2>{escape(title)}</h2>{body}</section>'
+    return (
+        f'<section class="card chart-card" data-testid="{testid}">'
+        f'<h2 class="card-title">{escape(title)}</h2>'
+        f'<div class="chart-body">{body}</div>'
+        "</section>"
+    )
 
 
 def build_market_value_chart(daily_df: pd.DataFrame) -> go.Figure:
@@ -70,10 +134,14 @@ def build_market_value_chart(daily_df: pd.DataFrame) -> go.Figure:
                 y=daily_df["total_market_value_jpy"],
                 name="評価額",
                 mode="lines",
+                line={"width": 2.5},
+                fill="tozeroy",
+                fillcolor="rgba(29, 78, 216, 0.08)",
             )
         ]
     )
-    fig.update_layout(title=None, xaxis_title="日付", yaxis_title="評価額 (円)", height=320)
+    _apply_chart_layout(fig)
+    fig.update_yaxes(title_text="JPY")
     return fig
 
 
@@ -85,25 +153,33 @@ def build_invested_chart(daily_df: pd.DataFrame) -> go.Figure:
                 y=daily_df["total_book_value_jpy"],
                 name="累計投資額",
                 mode="lines",
+                line={"width": 2.5, "color": COLOR_MUTED},
             )
         ]
     )
-    fig.update_layout(title=None, xaxis_title="日付", yaxis_title="累計投資額 (円)", height=320)
+    _apply_chart_layout(fig)
+    fig.update_yaxes(title_text="JPY")
     return fig
 
 
 def build_profit_loss_chart(daily_df: pd.DataFrame) -> go.Figure:
+    pl = daily_df["profit_loss_jpy"]
+    color = COLOR_SUCCESS if (not pl.empty and pl.iloc[-1] >= 0) else COLOR_DANGER
     fig = go.Figure(
         data=[
             go.Scatter(
                 x=daily_df["date"],
-                y=daily_df["profit_loss_jpy"],
+                y=pl,
                 name="評価損益",
                 mode="lines",
+                line={"width": 2.5, "color": color},
+                fill="tozeroy",
+                fillcolor=f"rgba({_hex_to_rgb(color)}, 0.08)",
             )
         ]
     )
-    fig.update_layout(title=None, xaxis_title="日付", yaxis_title="評価損益 (円)", height=320)
+    _apply_chart_layout(fig)
+    fig.update_yaxes(title_text="JPY", zeroline=True, zerolinecolor=COLOR_BORDER, zerolinewidth=1)
     return fig
 
 
@@ -117,25 +193,31 @@ def build_stacked_by_asset_chart(by_asset_df: pd.DataFrame) -> go.Figure:
                 name=str(asset_id),
                 stackgroup="one",
                 mode="lines",
+                line={"width": 0.5},
             )
         )
-    fig.update_layout(title=None, xaxis_title="日付", yaxis_title="評価額 (円)", height=360)
+    _apply_chart_layout(fig, height=340)
+    fig.update_yaxes(title_text="JPY")
     return fig
 
 
 def build_allocation_chart(by_asset_df: pd.DataFrame) -> go.Figure:
-    latest_date = by_asset_df["date"].max()
-    latest = by_asset_df[by_asset_df["date"] == latest_date]
+    latest_d = by_asset_df["date"].max()
+    latest = by_asset_df[by_asset_df["date"] == latest_d]
     fig = go.Figure(
         data=[
             go.Pie(
                 labels=latest["asset_id"],
                 values=latest["market_value_jpy"],
-                hole=0.3,
+                hole=0.55,
+                marker={"colors": CHART_PALETTE},
+                textinfo="percent",
+                textfont={"color": COLOR_SURFACE, "size": 13},
             )
         ]
     )
-    fig.update_layout(title=None, height=360)
+    _apply_chart_layout(fig, height=340)
+    fig.update_layout(margin={"l": 20, "r": 20, "t": 20, "b": 40})
     return fig
 
 
@@ -147,13 +229,26 @@ def _table(
     rows: list[list[str]],
     testid: str,
     title: str,
+    align_right: set[int] | None = None,
 ) -> str:
-    head = "".join(f"<th>{escape(h)}</th>" for h in headers)
-    body = "".join("<tr>" + "".join(f"<td>{escape(c)}</td>" for c in r) + "</tr>" for r in rows)
+    right_cols = align_right or set()
+    head = "".join(
+        f'<th class="{"num" if i in right_cols else ""}">{escape(h)}</th>'
+        for i, h in enumerate(headers)
+    )
+    body_rows = []
+    for r in rows:
+        cells = "".join(
+            f'<td class="{"num" if i in right_cols else ""}">{escape(c)}</td>'
+            for i, c in enumerate(r)
+        )
+        body_rows.append(f"<tr>{cells}</tr>")
+    body = "".join(body_rows)
     return (
-        f'<section class="table" data-testid="{testid}">'
-        f"<h2>{escape(title)}</h2>"
-        f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
+        f'<section class="card table-card" data-testid="{testid}">'
+        f'<h2 class="card-title">{escape(title)}</h2>'
+        f'<div class="table-wrap"><table>'
+        f"<thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>"
         "</section>"
     )
 
@@ -168,9 +263,10 @@ def build_holdings_table(
             [],
             testid="table-holdings",
             title="商品別保有状況",
+            align_right={2, 3, 4},
         )
-    latest_date = by_asset_df["date"].max()
-    latest = by_asset_df[by_asset_df["date"] == latest_date].sort_values(
+    latest_d = by_asset_df["date"].max()
+    latest = by_asset_df[by_asset_df["date"] == latest_d].sort_values(
         "market_value_jpy", ascending=False
     )
     rows = [
@@ -188,6 +284,7 @@ def build_holdings_table(
         rows,
         testid="table-holdings",
         title="商品別保有状況",
+        align_right={2, 3, 4},
     )
 
 
@@ -208,6 +305,7 @@ def build_monthly_purchases_table(monthly_purchases: list[dict[str, Any]]) -> st
         rows,
         testid="table-monthly-purchases",
         title="月次購入設定",
+        align_right={1, 2},
     )
 
 
@@ -218,6 +316,7 @@ def build_latest_prices_table(prices_df: pd.DataFrame | None) -> str:
             [],
             testid="table-latest-prices",
             title="最新価格一覧",
+            align_right={2},
         )
     df = prices_df.sort_values("date").groupby("asset_id").tail(1)
     rows = [
@@ -235,6 +334,7 @@ def build_latest_prices_table(prices_df: pd.DataFrame | None) -> str:
         rows,
         testid="table-latest-prices",
         title="最新価格一覧",
+        align_right={2},
     )
 
 
@@ -252,6 +352,20 @@ def _fmt(v: Any) -> str:
     if f.is_integer():
         return f"{int(f):,}"
     return f"{f:,.4f}".rstrip("0").rstrip(".")
+
+
+def _hex_to_rgb(hex_color: str) -> str:
+    h = hex_color.lstrip("#")
+    return f"{int(h[0:2], 16)}, {int(h[2:4], 16)}, {int(h[4:6], 16)}"
+
+
+def _pl_tone(pl: float) -> str:
+    """profit_loss の符号でクラス名を返す。"""
+    if pl > 0:
+        return "positive"
+    if pl < 0:
+        return "negative"
+    return "neutral"
 
 
 # -------------------- HTML --------------------
@@ -315,8 +429,9 @@ def render_html(
     status_note = ""
     if daily_df is None and by_asset_df is None:
         status_note = (
-            '<p data-testid="status">スケルトン版です。データが投入されると'
-            "実際の KPI とグラフが表示されます。</p>"
+            '<p class="status-note" data-testid="status">'
+            "スケルトン版です。データが投入されると実際の KPI とグラフが表示されます。"
+            "</p>"
         )
 
     cv = int(round(kpi["current_value_jpy"]))
@@ -324,60 +439,191 @@ def render_html(
     pl = int(round(kpi["profit_loss_jpy"]))
     pl_rate = kpi["profit_loss_rate"]
     mp = int(kpi["monthly_purchase_jpy"])
+    pl_tone = _pl_tone(pl)
+    pl_sign = "+" if pl > 0 else ("−" if pl < 0 else "")
+    pl_rate_sign = "+" if pl_rate > 0 else ("−" if pl_rate < 0 else "")
+    pl_display = f"{pl_sign}{abs(pl):,}"
+    pl_rate_display = f"{pl_rate_sign}{abs(pl_rate):.2%}"
+
+    last_updated = latest_date(daily_df, by_asset_df, prices_df)
+    updated_html = (
+        f'<span class="updated" data-testid="last-updated">最終更新 {escape(last_updated)}</span>'
+        if last_updated
+        else ""
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>積立投資 評価額トラッカー</title>
   <script src="{PLOTLY_CDN}"></script>
   <style>
-    body {{ font-family: system-ui, sans-serif; margin: 2rem; color: #222; }}
-    h1 {{ margin-top: 0; }}
-    h2 {{ font-size: 1.1rem; margin: 1.5rem 0 0.5rem; }}
-    .kpi {{
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
+    *, *::before, *::after {{ box-sizing: border-box; }}
+    :root {{
+      color-scheme: light;
+      --bg: {COLOR_BG};
+      --surface: {COLOR_SURFACE};
+      --border: {COLOR_BORDER};
+      --text: {COLOR_TEXT};
+      --muted: {COLOR_MUTED};
+      --accent: {COLOR_ACCENT};
+      --success: {COLOR_SUCCESS};
+      --danger: {COLOR_DANGER};
     }}
-    .kpi-card {{ border: 1px solid #ddd; border-radius: 8px; padding: 1rem; }}
-    .kpi-label {{ color: #666; font-size: 0.85rem; }}
-    .kpi-value {{ font-size: 1.5rem; font-weight: bold; }}
-    table {{ border-collapse: collapse; width: 100%; }}
-    th, td {{ border: 1px solid #ddd; padding: 0.4rem 0.6rem; text-align: left; }}
-    th {{ background: #f5f5f5; }}
-    .chart, .table {{ margin-top: 1.5rem; }}
+    html, body {{ margin: 0; padding: 0; }}
+    body {{
+      font-family: -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic",
+                   "Meiryo", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }}
+    .container {{ max-width: 1120px; margin: 0 auto; padding: 2rem 1.25rem 3rem; }}
+    .page-header {{
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }}
+    .page-header h1 {{
+      margin: 0;
+      font-size: 1.5rem;
+      letter-spacing: 0.01em;
+      font-weight: 700;
+    }}
+    .page-header .updated {{
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-variant-numeric: tabular-nums;
+    }}
+    .kpi-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }}
+    .kpi-card {{
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+    }}
+    .kpi-label {{
+      color: var(--muted);
+      font-size: 0.78rem;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.25rem;
+    }}
+    .kpi-value {{
+      font-size: 1.5rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.01em;
+    }}
+    .kpi-value.positive {{ color: var(--success); }}
+    .kpi-value.negative {{ color: var(--danger); }}
+    .card {{
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.25rem 1.25rem;
+      margin-bottom: 1rem;
+    }}
+    .card-title {{
+      margin: 0 0 0.75rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: 0.01em;
+    }}
+    .chart-card .chart-body {{ margin: 0 -0.25rem; }}
+    .table-wrap {{ overflow-x: auto; }}
+    table {{
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 0.9rem;
+    }}
+    thead th {{
+      text-align: left;
+      font-weight: 600;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      padding: 0.55rem 0.75rem;
+      background: transparent;
+    }}
+    tbody td {{
+      padding: 0.55rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      font-variant-numeric: tabular-nums;
+    }}
+    tbody tr:last-child td {{ border-bottom: none; }}
+    tbody tr:hover {{ background: #f8fafc; }}
+    th.num, td.num {{ text-align: right; }}
+    .status-note {{
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+    }}
+    .footer {{
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-align: center;
+      margin-top: 2rem;
+    }}
+    @media (max-width: 600px) {{
+      .container {{ padding: 1.5rem 1rem 2.5rem; }}
+      .page-header h1 {{ font-size: 1.25rem; }}
+      .kpi-value {{ font-size: 1.25rem; }}
+    }}
   </style>
 </head>
 <body>
-  <h1>積立投資 評価額トラッカー</h1>
-  <section class="kpi" data-testid="kpi">
-    <div class="kpi-card">
-      <div class="kpi-label">現在評価額</div>
-      <div class="kpi-value" data-testid="kpi-current-value">{cv:,} 円</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">累計投資額</div>
-      <div class="kpi-value" data-testid="kpi-total-invested">{ti:,} 円</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">評価損益</div>
-      <div class="kpi-value" data-testid="kpi-profit-loss">{pl:,} 円</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">評価損益率</div>
-      <div class="kpi-value" data-testid="kpi-profit-loss-rate">{pl_rate:.2%}</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">月間購入額</div>
-      <div class="kpi-value" data-testid="kpi-monthly-purchase">{mp:,} 円</div>
-    </div>
-  </section>
-  {charts_html}
-  {holdings_table}
-  {purchases_table}
-  {prices_table}
-  {status_note}
+  <div class="container">
+    <header class="page-header">
+      <h1>積立投資 評価額トラッカー</h1>
+      {updated_html}
+    </header>
+    <section class="kpi-grid" data-testid="kpi">
+      <div class="kpi-card">
+        <div class="kpi-label">現在評価額</div>
+        <div class="kpi-value" data-testid="kpi-current-value">{cv:,} 円</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">累計投資額</div>
+        <div class="kpi-value" data-testid="kpi-total-invested">{ti:,} 円</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">評価損益</div>
+        <div class="kpi-value {pl_tone}" data-testid="kpi-profit-loss">{pl_display} 円</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">評価損益率</div>
+        <div class="kpi-value {pl_tone}" data-testid="kpi-profit-loss-rate">{pl_rate_display}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">月間購入額</div>
+        <div class="kpi-value" data-testid="kpi-monthly-purchase">{mp:,} 円</div>
+      </div>
+    </section>
+    {charts_html}
+    {holdings_table}
+    {purchases_table}
+    {prices_table}
+    {status_note}
+    <footer class="footer">
+      Powered by yfinance / Yahoo!ファイナンス JP ・ generated by GitHub Actions
+    </footer>
+  </div>
 </body>
 </html>
 """
