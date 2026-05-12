@@ -25,3 +25,12 @@ assets:
     source_code: "JPY"
     unit_price_base: 1
     enabled: true
+
+  - asset_id: usd_jpy
+    name: "USD/JPY"
+    asset_type: "fx"
+    currency: "JPY"
+    price_source: "yfinance"
+    source_code: "USDJPY=X"
+    unit_price_base: 1
+    enabled: true
