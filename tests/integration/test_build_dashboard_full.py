@@ -229,6 +229,53 @@ class TestRenderHtmlFull:
         html = render_html(daily_df=daily_df)
         assert "cdn.plot.ly" in html
 
+    def test_last_updated_shows_latest_date(
+        self,
+        daily_df: pd.DataFrame,
+        by_asset_df: pd.DataFrame,
+    ) -> None:
+        html = render_html(daily_df=daily_df, by_asset_df=by_asset_df)
+        assert 'data-testid="last-updated"' in html
+        # daily_df の最新日は 2026-05-05
+        assert "2026-05-05" in html
+
+    def test_no_last_updated_when_no_data(self) -> None:
+        html = render_html()
+        assert 'data-testid="last-updated"' not in html
+
+    def test_profit_loss_positive_uses_positive_class(
+        self,
+        daily_df: pd.DataFrame,
+        by_asset_df: pd.DataFrame,
+        monthly_purchases: list[dict],
+    ) -> None:
+        # daily_df 5/5 の損益は +150,000 → positive
+        html = render_html(
+            daily_df=daily_df, by_asset_df=by_asset_df, monthly_purchases=monthly_purchases
+        )
+        # positive クラスが kpi-profit-loss と一緒に出る
+        assert "positive" in html
+        # 符号付き表示
+        assert "+150,000" in html
+
+    def test_profit_loss_negative_uses_negative_class(self, monthly_purchases: list[dict]) -> None:
+        # 損益マイナスの daily_df を直接渡す
+        daily_neg = pd.DataFrame(
+            [
+                {
+                    "date": date(2026, 5, 5),
+                    "total_book_value_jpy": 5_000_000,
+                    "total_market_value_jpy": 4_900_000,
+                    "profit_loss_jpy": -100_000,
+                    "profit_loss_rate": -0.02,
+                }
+            ]
+        )
+        html = render_html(daily_df=daily_neg, monthly_purchases=monthly_purchases)
+        assert "negative" in html
+        # 全角マイナス + 絶対値
+        assert "−100,000" in html
+
 
 class TestBuildFull:
     def test_build_writes_full_html(
