@@ -1,3 +1,4 @@
 date,asset_id,amount_jpy,price,quantity,account_type
 2026-05-05,emaxis_slim_sp500,50000,41827,11954.001,NISA
 2026-05-10,vt,20000,19231.1028,1.04,特定
+2026-05-25,cash_jpy,30000,1,30000,現金
