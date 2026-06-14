@@ -159,3 +159,7 @@ date,asset_id,price,currency,source
 2026-06-13,vt,156.2899932861328,USD,yfinance
 2026-06-13,cash_jpy,1.0,JPY,fixed
 2026-06-13,usd_jpy,160.18499755859375,JPY,yfinance
+2026-06-14,emaxis_slim_sp500,2838.0,JPY,yahoo_finance_jp
+2026-06-14,vt,156.2899932861328,USD,yfinance
+2026-06-14,cash_jpy,1.0,JPY,fixed
+2026-06-14,usd_jpy,160.1300048828125,JPY,yfinance
